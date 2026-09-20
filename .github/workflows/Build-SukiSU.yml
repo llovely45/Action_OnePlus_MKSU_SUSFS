@@ -208,6 +208,21 @@ jobs:
             echo "No legacy USER_ARG_NULL macro found; no compatibility fix needed"
           fi
 
+      - name: Fix SukiSU SELinux symbol compatibility
+        run: |
+          cd kernel_workspace/kernel_platform
+          SELINUX_FILE=common/drivers/kernelsu/feature/selinux_hide.c
+          if [ -f "$SELINUX_FILE" ] && grep -q 'context_struct_compute_av_fn' "$SELINUX_FILE"; then
+            perl -0pi -e 's/\n\s*context_struct_compute_av_fn\s*=\s*find_kernel_symbol_exact\("context_struct_compute_av"\);\s*if\s*\(!context_struct_compute_av_fn\)\s*\{\s*pr_warn\("context_struct_compute_av not found!\\n"\);\s*\}//s; s/\s*if\s*\(context_struct_compute_av_fn\)\s*\{\s*context_struct_compute_av_fn\(policydb,\s*scontext,\s*tcontext,\s*tclass,\s*avd,\s*NULL\);\s*\}\s*else\s*\{\s*context_struct_compute_av\(policydb,\s*scontext,\s*tcontext,\s*tclass,\s*avd,\s*NULL\);\s*\}/\n    context_struct_compute_av(policydb, scontext, tcontext, tclass, avd, NULL);/s' "$SELINUX_FILE"
+            if grep -q 'context_struct_compute_av_fn = find_kernel_symbol_exact' "$SELINUX_FILE" || grep -q 'if (context_struct_compute_av_fn)' "$SELINUX_FILE"; then
+              echo "SELinux symbol compatibility patch did not match $SELINUX_FILE"
+              exit 1
+            fi
+            echo "Using SukiSU's built-in context_struct_compute_av fallback"
+          else
+            echo "No SukiSU SELinux symbol fallback needed"
+          fi
+
       - name: Apply Patches SukiSU Ultra
         if: ${{ github.event.inputs.ANDROID_VERSION != 'android16' || github.event.inputs.KERNEL_VERSION != '6.6' || github.event.inputs.FEIL != 'oneplus_13t' }}
         run: |
