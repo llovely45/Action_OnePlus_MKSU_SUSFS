@@ -270,6 +270,7 @@ jobs:
             echo "CONFIG_KSU_SUSFS_OPEN_REDIRECT=y" >> "$CONFIG_FILE"
           else
             echo "Android 16 / 6.6 / OnePlus 13T has no official SUSFS patch branch; building core SukiSU only"
+            echo "CONFIG_KSU_SUSFS=n" >> "$CONFIG_FILE"
           fi
 
           # Remove check_defconfig
@@ -337,7 +338,8 @@ jobs:
         if: ${{ github.event.inputs.CPU != 'sm8650' && github.event.inputs.CPU != 'sm7675' }}
         run: |
          cd kernel_workspace
-         LTO=thin SYSTEM_DLKM_RE_SIGN=0 BUILD_SYSTEM_DLKM=0 KMI_SYMBOL_LIST_STRICT_MODE=0 ./kernel_platform/oplus/build/oplus_build_kernel.sh ${{ github.event.inputs.CPUD }} ${{ github.event.inputs.BUILD_METHOD }}
+         LTO=thin SYSTEM_DLKM_RE_SIGN=0 BUILD_SYSTEM_DLKM=0 KMI_SYMBOL_LIST_STRICT_MODE=0 bash -o pipefail ./kernel_platform/oplus/build/oplus_build_kernel.sh ${{ github.event.inputs.CPUD }} ${{ github.event.inputs.BUILD_METHOD }}
+         test -f "kernel_platform/out/msm-kernel-${{ github.event.inputs.CPUD }}-${{ github.event.inputs.BUILD_METHOD }}/dist/Image"
 
       - name: Make AnyKernel3
         run: |
@@ -364,7 +366,7 @@ jobs:
           elif find "$dir5" -name "Image" | grep -q "Image"; then
             image_path="$dir5"Image
           else
-            image_path=$(find "./kernel_workspace/kernel_platform/common/out/" -name "Image" | head -n 1)
+            image_path=$(find "./kernel_workspace/kernel_platform/out/" -type f -name "Image" 2>/dev/null | head -n 1)
           fi
 
           # 拷贝 Image
