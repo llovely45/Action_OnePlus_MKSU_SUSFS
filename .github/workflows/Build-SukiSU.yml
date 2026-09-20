@@ -196,6 +196,18 @@ jobs:
           export KSU_VERSION=$KSU_VERSION
           sed -i "s/DKSU_VERSION=12800/DKSU_VERSION=${KSU_VERSION}/" kernel/Makefile
 
+      - name: Fix SukiSU user_arg_ptr compatibility
+        run: |
+          cd kernel_workspace/kernel_platform
+          SULOG_FILE=common/drivers/kernelsu/sulog/event.c
+          if [ -f "$SULOG_FILE" ] && grep -q 'USER_ARG_NULL user_arg_null_ptr()' "$SULOG_FILE"; then
+            sed -i 's/USER_ARG_NULL user_arg_null_ptr()/USER_ARG_NULL (*user_arg_null_ptr())/' "$SULOG_FILE"
+            echo "Fixed user_arg_null_ptr value/pointer mismatch in $SULOG_FILE"
+            grep -n 'USER_ARG_NULL' "$SULOG_FILE"
+          else
+            echo "No legacy USER_ARG_NULL macro found; no compatibility fix needed"
+          fi
+
       - name: Apply Patches SukiSU Ultra
         if: ${{ github.event.inputs.ANDROID_VERSION != 'android16' || github.event.inputs.KERNEL_VERSION != '6.6' || github.event.inputs.FEIL != 'oneplus_13t' }}
         run: |
